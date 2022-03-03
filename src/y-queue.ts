@@ -1,8 +1,8 @@
-import { CSemaphore } from './c-semaphore';
+import { YSemaphore } from './y-semaphore';
 
-export const DEFAULT_QUEUE_CONCURRENCY = 100;
+export const DEFAULT_QUEUE_CONCURRENCY = 10;
 
-export interface CQueueOptions {
+export interface YQueueOptions {
   concurrency?: number;
 }
 
@@ -14,13 +14,13 @@ export type Task<TaskResultType> =
   | (() => PromiseLike<TaskResultType>)
   | (() => TaskResultType);
 
-export class CQueue {
-  private readonly semaphore: CSemaphore;
+export class YQueue {
+  private readonly semaphore: YSemaphore;
   private onIdleWaits: Array<() => void> = [];
-  constructor(readonly options?: CQueueOptions) {
+  constructor(readonly options?: YQueueOptions) {
     let concurrency = options?.concurrency ?? DEFAULT_QUEUE_CONCURRENCY;
     if (!(concurrency >= 1)) concurrency = DEFAULT_QUEUE_CONCURRENCY;
-    this.semaphore = new CSemaphore(concurrency);
+    this.semaphore = new YSemaphore(concurrency);
   }
 
   async run<TaskResultType>(
@@ -54,4 +54,4 @@ export class CQueue {
   }
 }
 
-export default CQueue;
+export default YQueue;

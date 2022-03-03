@@ -5,7 +5,7 @@ interface SemaphoreRequest {
   sequence: number;
   ack: (slot: number) => void;
 }
-export class CSemaphore {
+export class YSemaphore {
   private readonly slots: boolean[];
   private readonly availableSlots: number[];
   private readonly pq: BinaryHeap<SemaphoreRequest>;

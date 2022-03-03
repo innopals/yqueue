@@ -1,5 +1,5 @@
 import { createNamespace } from 'cls-hooked';
-import Queue from '../c-queue';
+import Queue from '../y-queue';
 
 function sleep(ms: number) {
   return new Promise(f => setTimeout(f, ms));

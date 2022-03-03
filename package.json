@@ -1,11 +1,11 @@
 {
-  "name": "c-queue",
+  "name": "yqueue",
   "author": "innopals",
   "description": "Yet another concurrent task queue",
-  "homepage": "https://github.com/innopals/c-queue",
+  "homepage": "https://github.com/innopals/yqueue",
   "repository": {
     "type": "git",
-    "url": "git@github.com:innopals/c-queue.git"
+    "url": "git@github.com:innopals/yqueue.git"
   },
   "keywords": [
     "nodejs",
