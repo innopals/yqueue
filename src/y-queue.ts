@@ -1,3 +1,4 @@
+import { BinaryHeap } from './binary-heap';
 import { YSemaphore } from './y-semaphore';
 
 export const DEFAULT_QUEUE_CONCURRENCY = 10;
@@ -14,13 +15,24 @@ export type Task<TaskResultType> =
   | (() => PromiseLike<TaskResultType>)
   | (() => TaskResultType);
 
+interface WaitForQueueLessThan {
+  ack: () => void;
+  threshold: number;
+}
+
 export class YQueue {
   private readonly semaphore: YSemaphore;
+  public readonly concurrency: number;
   private onIdleWaits: Array<() => void> = [];
+  private onQueueLessThanWaits: BinaryHeap<WaitForQueueLessThan>;
   constructor(readonly options?: YQueueOptions) {
     let concurrency = options?.concurrency ?? DEFAULT_QUEUE_CONCURRENCY;
     if (!(concurrency >= 1)) concurrency = DEFAULT_QUEUE_CONCURRENCY;
+    this.concurrency = concurrency;
     this.semaphore = new YSemaphore(concurrency);
+    this.onQueueLessThanWaits = new BinaryHeap<WaitForQueueLessThan>(
+      (a, b) => a.threshold - b.threshold,
+    );
   }
 
   async run<TaskResultType>(
@@ -35,6 +47,13 @@ export class YQueue {
       if (this.semaphore.getAvailablePermits() === this.semaphore.permits) {
         this.onIdleWaits.forEach(f => f());
         this.onIdleWaits = [];
+      }
+      const queueLength = this.semaphore.getQueueLength();
+      for (;;) {
+        const next = this.onQueueLessThanWaits.peek();
+        if (next === null || queueLength >= next.threshold) break;
+        next.ack();
+        this.onQueueLessThanWaits.removeMax();
       }
     }
   }
@@ -51,6 +70,15 @@ export class YQueue {
       return Promise.resolve();
     }
     return new Promise(f => this.onIdleWaits.push(f));
+  }
+
+  onQueueLessThan(size: number): Promise<void> {
+    if (this.semaphore.getQueueLength() < size) {
+      return Promise.resolve();
+    }
+    return new Promise(f =>
+      this.onQueueLessThanWaits.add({ ack: f, threshold: size }),
+    );
   }
 }
 

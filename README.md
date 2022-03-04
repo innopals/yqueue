@@ -1,3 +1,3 @@
-# c-queue
+# YQueue
 
-Yet another concurrent task queue
+Yet another concurrent task queue, yay!

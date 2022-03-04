@@ -20,6 +20,9 @@ export class BinaryHeap<T> {
       } else break;
     }
   }
+  peek(): T | null {
+    return this.values[0] ?? null;
+  }
   removeMax(): T | null {
     if (this.values.length <= 1) return this.values.pop() ?? null;
     const max: T = this.values[0];
