@@ -9,15 +9,21 @@ export class BinaryHeap<T> {
     let index = this.values.length - 1;
     const current: T = this.values[index];
 
-    while (index > 0) {
-      const parentIndex = Math.floor((index - 1) / 2);
-      const parent = this.values[parentIndex];
+    try {
+      while (index > 0) {
+        const parentIndex = Math.floor((index - 1) / 2);
+        const parent = this.values[parentIndex];
 
-      if (this.compare(parent, current) < 0) {
-        this.values[parentIndex] = current;
-        this.values[index] = parent;
-        index = parentIndex;
-      } else break;
+        if (this.compare(parent, current) < 0) {
+          this.values[parentIndex] = current;
+          this.values[index] = parent;
+          index = parentIndex;
+        } else break;
+      }
+    } catch (e) {
+      // compare function throws an error.
+      this.values.pop();
+      throw e;
     }
   }
   peek(): T | null {

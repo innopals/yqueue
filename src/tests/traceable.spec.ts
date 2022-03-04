@@ -1,11 +1,8 @@
 import { createNamespace } from 'cls-hooked';
 import Queue from '../y-queue';
+import { sleep } from './util';
 
-function sleep(ms: number) {
-  return new Promise(f => setTimeout(f, ms));
-}
-
-describe('queue behavior demonstration', () => {
+describe('queue execution traceability demonstration', () => {
   it('fail fast', async () => {
     const q = new Queue({ concurrency: 3 });
     const tasks: Array<Promise<unknown>> = [];
