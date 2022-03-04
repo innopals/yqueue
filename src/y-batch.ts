@@ -5,7 +5,7 @@ export interface YBatchOptions {
   maxQueueLength?: number;
 }
 
-export class YBatchError extends Error {
+export class YBatchErrors extends Error {
   constructor(public readonly errors: unknown[]) {
     super(`Batch failed with ${errors.length} errors.`);
     this.name = new.target.name;
@@ -17,7 +17,7 @@ export class YBatch {
   private readonly queue: YQueue;
   private readonly errors: Array<unknown> = [];
   private failFastWaits: Array<(error?: unknown) => void> = [];
-  private allSettledWaits: Array<(error?: YBatchError) => void> = [];
+  private allSettledWaits: Array<(error?: YBatchErrors) => void> = [];
   private running = 0;
   constructor(readonly options: YBatchOptions) {
     this.queue = new YQueue({
@@ -47,7 +47,7 @@ export class YBatch {
       if (this.running === 0) {
         this.allSettledWaits.forEach(ack => {
           ack(
-            this.errors.length > 0 ? new YBatchError(this.errors) : undefined,
+            this.errors.length > 0 ? new YBatchErrors(this.errors) : undefined,
           );
         });
         this.allSettledWaits = [];
@@ -77,7 +77,7 @@ export class YBatch {
   async allSettled(): Promise<void> {
     if (this.running === 0) {
       if (this.errors.length === 0) return;
-      throw new YBatchError(this.errors);
+      throw new YBatchErrors(this.errors);
     }
     return new Promise<void>((f, r) => {
       this.allSettledWaits.push(e => {
