@@ -1,3 +1,4 @@
+import { createNamespace } from 'cls-hooked';
 import { YBatch, YBatchErrors } from '../y-batch';
 import { sleep } from './util';
 
@@ -81,5 +82,58 @@ describe('YBatch test suite', () => {
       }
     }).rejects.toThrowError(YBatchErrors);
     expect(rs).toEqual([1, 2, 3, '-2', '-2', '-2']);
+  });
+
+  it('will keep stack trace', async function functionNameInStacktrace() {
+    const batch = new YBatch({ concurrency: 1 });
+    try {
+      await batch.add(async function taskFunctionName1() {
+        throw new Error();
+      });
+      await batch.failFast();
+    } catch (e: any) {
+      expect(e.stack).toContain('taskFunctionName1');
+    }
+    (() => {
+      batch.add(async () => sleep(100));
+    })();
+    let error: any = null;
+    try {
+      await batch.add(async function taskFunctionName2() {
+        await sleep(1);
+        error = new Error();
+        throw error;
+      });
+      await batch.allSettled();
+    } catch (e: any) {
+      expect(e.errors.length).toBe(2);
+      expect(e.errors[1] === error).toBeTruthy();
+      expect(error.stack).toContain('taskFunctionName2');
+      expect(e.stack).toContain('functionNameInStacktrace');
+    }
+  });
+  it('will keep async hook namespace', async function () {
+    const session = createNamespace('session');
+    await session.runPromise(async () => {
+      session.set('k', 0);
+      const batch = new YBatch({ concurrency: 1 });
+      await session.runPromise(async () => {
+        session.set('k', 1);
+        await batch.add(async () => {
+          expect(session.get('k')).toBe(1);
+        });
+        (() => {
+          // ensure the subsequent tasks to be queued
+          batch.add(async () => sleep(50));
+        })();
+      });
+      await session.runPromise(async function () {
+        session.set('k', 2);
+        await batch.add(async () => {
+          expect(session.get('k')).toBe(2);
+        });
+      });
+      await batch.failFast();
+    });
   });
 });

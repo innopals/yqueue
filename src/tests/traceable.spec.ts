@@ -93,8 +93,15 @@ describe('queue execution traceability demonstration', () => {
     } catch (e: any) {
       expect(e.stack).toContain('functionNameInStacktrace');
     }
+    let error: any = null;
+    q.add(async function taskFunctionName() {
+      await sleep(1);
+      error = new Error();
+    });
+    await q.onIdle();
+    expect(error.stack).toContain('taskFunctionName');
   });
-  it('will keep async hook namespace', async function functionNameInStacktrace() {
+  it('will keep async hook namespace', async function () {
     const session = createNamespace('session');
     const roughQueue: any[] = [];
     const q = new Queue({ concurrency: 1 });

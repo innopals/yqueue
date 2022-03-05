@@ -13,7 +13,7 @@ npm install yqueue
 - Concurrency control
 - Prioritized tasks
 - Error handling for batch tasks
-- Expected error stack trace
+- Best effort for error stack trace
 - Work with async hooks
 
 ## API

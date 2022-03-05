@@ -17,7 +17,7 @@ export class YBatch {
   private readonly queue: YQueue;
   private readonly errors: Array<unknown> = [];
   private failFastWaits: Array<(error?: unknown) => void> = [];
-  private allSettledWaits: Array<(error?: YBatchErrors) => void> = [];
+  private allSettledWaits: Array<(errors: unknown[]) => void> = [];
   private running = 0;
   constructor(readonly options: YBatchOptions) {
     this.queue = new YQueue({
@@ -48,9 +48,7 @@ export class YBatch {
       this.running--;
       if (this.running === 0) {
         this.allSettledWaits.forEach(ack => {
-          ack(
-            this.errors.length > 0 ? new YBatchErrors(this.errors) : undefined,
-          );
+          ack(this.errors);
         });
         this.allSettledWaits = [];
         this.failFastWaits.forEach(ack => {
@@ -81,11 +79,11 @@ export class YBatch {
       if (this.errors.length === 0) return;
       throw new YBatchErrors(this.errors);
     }
-    return new Promise<void>((f, r) => {
-      this.allSettledWaits.push(e => {
-        if (e === undefined) f();
-        else r(e);
-      });
+    return new Promise<unknown[]>(f => {
+      this.allSettledWaits.push(f);
+    }).then(errors => {
+      if (errors.length === 0) return;
+      throw new YBatchErrors(errors);
     });
   }
 }
