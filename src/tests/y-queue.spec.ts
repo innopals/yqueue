@@ -28,6 +28,12 @@ describe('YQueue test suite', () => {
     await q.onIdle();
     expect(rs).toEqual([1, 2, 3, -3, 4, -1, -4, -2]);
   });
+  it('empty queue', async () => {
+    const q = new Queue({ concurrency: 3 });
+    await q.onIdle();
+    await q.onQueueLessThan(1);
+    await q.onQueueLessThan(0);
+  });
   it('concurrency control', async () => {
     const q = new Queue({ concurrency: 3 });
     let working = 0;

@@ -13,7 +13,7 @@ export class YBatchErrors extends Error {
 }
 
 export class YBatch {
-  private readonly maxQueueLength: number;
+  readonly maxQueueLength: number;
   private readonly queue: YQueue;
   private readonly errors: Array<unknown> = [];
   private failFastWaits: Array<(error?: unknown) => void> = [];
@@ -31,32 +31,37 @@ export class YBatch {
 
   async add(fn: Task<void>, options?: Partial<EnqueueOptions>): Promise<void> {
     this.running++;
-    try {
-      await this.queue.onQueueLessThan(this.maxQueueLength);
-      await this.queue.run(fn, options);
-    } catch (e: unknown) {
-      this.errors.push(e);
-      if (this.failFastWaits.length > 0) {
-        this.failFastWaits.forEach(ack => {
-          ack(this.errors[0]);
-        });
-        this.failFastWaits = [];
+    await this.queue.onQueueLessThan(this.maxQueueLength);
+    const task = this.queue.run(fn, options);
+    setImmediate(async () => {
+      try {
+        await task;
+      } catch (e: unknown) {
+        this.errors.push(e);
+        if (this.failFastWaits.length > 0) {
+          this.failFastWaits.forEach(ack => {
+            ack(this.errors[0]);
+          });
+          this.failFastWaits = [];
+        }
+      } finally {
+        this.running--;
+        if (this.running === 0) {
+          this.allSettledWaits.forEach(ack => {
+            ack(
+              this.errors.length > 0
+                ? new YBatchErrors(this.errors)
+                : undefined,
+            );
+          });
+          this.allSettledWaits = [];
+          this.failFastWaits.forEach(ack => {
+            ack(this.errors[0]);
+          });
+          this.failFastWaits = [];
+        }
       }
-    } finally {
-      this.running--;
-      if (this.running === 0) {
-        this.allSettledWaits.forEach(ack => {
-          ack(
-            this.errors.length > 0 ? new YBatchErrors(this.errors) : undefined,
-          );
-        });
-        this.allSettledWaits = [];
-        this.failFastWaits.forEach(ack => {
-          ack(this.errors[0]);
-        });
-        this.failFastWaits = [];
-      }
-    }
+    });
   }
 
   async failFast(): Promise<void> {

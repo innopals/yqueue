@@ -73,7 +73,7 @@ export class YQueue {
   }
 
   onQueueLessThan(size: number): Promise<void> {
-    if (this.semaphore.getQueueLength() < size) {
+    if (this.semaphore.getQueueLength() < (size > 0 ? size : 1)) {
       return Promise.resolve();
     }
     return new Promise(f =>
