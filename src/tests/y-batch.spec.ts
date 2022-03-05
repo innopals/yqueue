@@ -42,40 +42,44 @@ describe('YBatch test suite', () => {
       try {
         await batch.failFast();
         rs.push(0);
-      } catch (e) {
-        rs.push(e as number);
+      } catch (e: any) {
+        rs.push(e.message);
       }
     });
     await batch.add(async () => {
       rs.push(2);
       await sleep(1);
-      throw -2;
+      throw new Error('-2');
     });
     await batch.add(async () => {
       rs.push(3);
       await sleep(1);
-      throw -3;
+      throw new Error('-3');
     });
     try {
       await batch.failFast();
       rs.push(0);
-    } catch (e) {
-      rs.push(e as number);
+    } catch (e: any) {
+      rs.push(e.message);
     }
     try {
       await batch.failFast();
       rs.push(0);
-    } catch (e) {
-      rs.push(e as number);
+    } catch (e: any) {
+      rs.push(e.message);
     }
     await expect(async () => {
       try {
         await batch.allSettled();
+        rs.push(0);
       } catch (e) {
-        expect((e as YBatchErrors).errors).toEqual([-2, -3]);
+        const errors = (e as YBatchErrors).errors as any[];
+        expect(errors.length).toEqual(2);
+        expect(errors[0].message).toEqual('-2');
+        expect(errors[1].message).toEqual('-3');
         throw e;
       }
     }).rejects.toThrowError(YBatchErrors);
-    expect(rs).toEqual([1, 2, 3, -2, -2, -2]);
+    expect(rs).toEqual([1, 2, 3, '-2', '-2', '-2']);
   });
 });

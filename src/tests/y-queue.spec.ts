@@ -31,8 +31,8 @@ describe('YQueue test suite', () => {
   it('empty queue', async () => {
     const q = new Queue({ concurrency: 3 });
     await q.onIdle();
-    await q.onQueueLessThan(1);
-    await q.onQueueLessThan(0);
+    await q.onQueueSizeLessThan(1);
+    await q.onQueueSizeLessThan(0);
   });
   it('concurrency control', async () => {
     const q = new Queue({ concurrency: 3 });
@@ -60,9 +60,17 @@ describe('YQueue test suite', () => {
         },
         { priority: i },
       );
+      q.add(
+        () => {
+          rs.push(i);
+        },
+        { priority: i },
+      );
     }
     await q.onIdle();
-    expect(rs).toEqual([1, 2, 3, 10, 9, 8, 7, 6, 5, 4]);
+    expect(rs).toEqual([
+      1, 1, 2, 10, 10, 9, 9, 8, 8, 7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2,
+    ]);
   });
   it('wait on queue size', async () => {
     const q = new Queue({ concurrency: 3 });
@@ -75,10 +83,10 @@ describe('YQueue test suite', () => {
     await Promise.all(
       Array.from({ length: 20 }).map(async (_, i) => {
         if (i >= 10) {
-          await q.onQueueLessThan(20 - i);
+          await q.onQueueSizeLessThan(20 - i);
           rs.push(20 - i);
         } else {
-          await q.onQueueLessThan(i + 1);
+          await q.onQueueSizeLessThan(i + 1);
           rs.push(i + 1);
         }
       }),
@@ -91,7 +99,7 @@ describe('YQueue test suite', () => {
     const q = new Queue({ concurrency: 3 });
     const rs: number[] = [];
     for (let i = 1; i <= 10; i++) {
-      await q.onQueueLessThan(1);
+      await q.onQueueSizeLessThan(1);
       rs.push(0);
       q.add(async () => {
         rs.push(i);

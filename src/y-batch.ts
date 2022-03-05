@@ -31,35 +31,32 @@ export class YBatch {
 
   async add(fn: Task<void>, options?: Partial<EnqueueOptions>): Promise<void> {
     this.running++;
-    await this.queue.onQueueLessThan(this.maxQueueLength);
-    const task = this.queue.run(fn, options);
+    await this.queue.onQueueSizeLessThan(this.maxQueueLength);
+    let error: unknown | null = null;
+    const task = this.queue.run(fn, options).catch(e => (error = e));
     setImmediate(async () => {
-      try {
-        await task;
-      } catch (e: unknown) {
-        this.errors.push(e);
+      await task;
+      if (error !== null) {
+        this.errors.push(error);
         if (this.failFastWaits.length > 0) {
           this.failFastWaits.forEach(ack => {
             ack(this.errors[0]);
           });
           this.failFastWaits = [];
         }
-      } finally {
-        this.running--;
-        if (this.running === 0) {
-          this.allSettledWaits.forEach(ack => {
-            ack(
-              this.errors.length > 0
-                ? new YBatchErrors(this.errors)
-                : undefined,
-            );
-          });
-          this.allSettledWaits = [];
-          this.failFastWaits.forEach(ack => {
-            ack(this.errors[0]);
-          });
-          this.failFastWaits = [];
-        }
+      }
+      this.running--;
+      if (this.running === 0) {
+        this.allSettledWaits.forEach(ack => {
+          ack(
+            this.errors.length > 0 ? new YBatchErrors(this.errors) : undefined,
+          );
+        });
+        this.allSettledWaits = [];
+        this.failFastWaits.forEach(ack => {
+          ack(this.errors[0]);
+        });
+        this.failFastWaits = [];
       }
     });
   }
