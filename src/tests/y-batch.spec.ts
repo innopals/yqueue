@@ -136,4 +136,33 @@ describe('YBatch test suite', () => {
       await batch.failFast();
     });
   });
+  it('will wrap internal errors', async () => {
+    const batch = new YBatch({ concurrency: 1 });
+    await batch.add(async () => {
+      await sleep(10);
+      throw new Error('1');
+    });
+    await batch.add(async () => {
+      await sleep(20);
+      throw new Error('2');
+    });
+    try {
+      await batch.allSettled();
+    } catch (e: unknown) {
+      expect(YBatch.isYBatchError(e)).toBeTruthy();
+      if (YBatch.isYBatchError(e)) {
+        expect(e.errors.length).toBe(2);
+        expect(e.toString()).toBe(
+          'YBatchErrors: Batch failed with 2 errors.\n' +
+            'wrapped errors:\n' +
+            '\tError: 1\n' +
+            '\tError: 2',
+        );
+        console.log(e.stack);
+        expect(e.stack).toContain('Error: 1');
+        expect(e.stack).toContain('Error: 2');
+        expect(e.stack).toContain('y-batch.spec.ts');
+      }
+    }
+  });
 });

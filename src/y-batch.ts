@@ -9,10 +9,27 @@ export class YBatchErrors extends Error {
   constructor(public readonly errors: unknown[]) {
     super(`Batch failed with ${errors.length} errors.`);
     this.name = new.target.name;
+    let s = this.stack ?? super.toString();
+    s += '\nwrapped errors:';
+    this.errors.forEach((e: any, i) => {
+      s += `\n#${i}\n${e.stack}`;
+    });
+    this.stack = s;
+  }
+  toString(): string {
+    let s = super.toString();
+    s += '\nwrapped errors:';
+    for (const e of this.errors) {
+      s += '\n\t' + (e as any).toString();
+    }
+    return s;
   }
 }
 
 export class YBatch {
+  static isYBatchError(e: unknown): e is YBatchErrors {
+    return e instanceof YBatchErrors;
+  }
   readonly maxQueueLength: number;
   private readonly queue: YQueue;
   private readonly errors: Array<unknown> = [];
